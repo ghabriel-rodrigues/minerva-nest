@@ -1,0 +1,59 @@
+services:
+  api:
+    container_name: athens-backend-nestjs
+    build:
+      dockerfile: Dockerfile
+      context: .
+      target: development
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+    env_file:
+      - .env
+    command: npm run start:dev
+    ports:
+      - ${APP_PORT}:${APP_PORT}
+    depends_on:
+      - postgres
+    environment:
+      DB_HOST: "postgres"
+      MIGRATION_DB_HOST: "postgres"
+    healthcheck:
+      test: ["CMD", "wget", "localhost:${APP_PORT}/ -q -O - > /dev/null 2>&1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+  
+  postgres:
+    image: postgres:14-alpine
+    container_name: container_postgres
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - '5432:5432'
+    volumes:
+      - docker-postgres:/var/lib/postgresql/data
+      - ./docker/postgres/00-setup.sql:/docker-entrypoint-initdb.d/00-setup.sql
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: container_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: "admin@example.com"
+      PGADMIN_DEFAULT_PASSWORD: "admin"
+    ports:
+      - 8081:80
+    depends_on:
+      - postgres
+
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - 8080:8080
+
+volumes:
+  docker-postgres:
+    driver: local
